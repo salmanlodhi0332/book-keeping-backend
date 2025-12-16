@@ -15,7 +15,6 @@ const User = db.User;
 const JWT_SECRET = process.env.JWT_SECRET || "secret";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "7d";
 
-
 // ======================================================================
 // REGISTER → TEMP USER + OTP
 // ======================================================================
@@ -40,20 +39,18 @@ exports.register = async (req, res) => {
     // Store temp user
     tempUserStore[email] = { name, email, phone, password };
 
-    saveOTP(email, otp,"register");
+    saveOTP(email, otp, "register");
 
     return res.json({
       success: true,
       message: "OTP has been sent. Please verify to complete registration.",
       otp, // ⚠️ remove in production
     });
-
   } catch (err) {
     console.error("REGISTER ERROR:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 // ======================================================================
 // VERIFY OTP → REGISTRATION / FORGOT PASSWORD
@@ -65,9 +62,9 @@ exports.verifyOtp = async (req, res) => {
       return res.status(422).json({ errors: errors.array() });
 
     const { email, otp, purpose } = req.body;
-    console.log(`verifyOtp api email:${email}, ${otp}, ${purpose}}`)
+    console.log(`verifyOtp api email:${email}, ${otp}, ${purpose}}`);
     const otpCode = String(otp).trim();
-    const isValid = verifyOTP(email, otpCode,purpose);
+    const isValid = verifyOTP(email, otpCode, purpose);
     if (!isValid)
       return res.status(400).json({ message: "Invalid or expired OTP" });
 
@@ -104,13 +101,11 @@ exports.verifyOtp = async (req, res) => {
     }
 
     return res.status(400).json({ message: "Invalid purpose" });
-
   } catch (err) {
     console.error("VERIFY OTP ERROR:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 // ======================================================================
 // LOGIN
@@ -124,18 +119,14 @@ exports.login = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ where: { email } });
-    if (!user)
-      return res.status(401).json({ message: "Invalid credentials" });
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
     const valid = await bcrypt.compare(password, user.password);
-    if (!valid)
-      return res.status(401).json({ message: "Invalid credentials" });
+    if (!valid) return res.status(401).json({ message: "Invalid credentials" });
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email },
-      JWT_SECRET,
-      { expiresIn: JWT_EXPIRES_IN }
-    );
+    const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
+      expiresIn: JWT_EXPIRES_IN,
+    });
 
     return res.json({
       success: true,
@@ -143,13 +134,11 @@ exports.login = async (req, res) => {
       token,
       user,
     });
-
   } catch (err) {
     console.error("LOGIN ERROR:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 // ======================================================================
 // FORGOT PASSWORD → SEND OTP
@@ -157,7 +146,7 @@ exports.login = async (req, res) => {
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
-console.log(email)
+    console.log(email);
     const existing = await User.findOne({ where: { email } });
 
     // Always return true → security
@@ -176,13 +165,11 @@ console.log(email)
       message: "OTP sent successfully.",
       otp, // ⚠️ remove in production
     });
-
   } catch (err) {
     console.error("FORGOT PASSWORD ERROR:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 // ======================================================================
 // RESET PASSWORD (AFTER VERIFY-OTP)
@@ -192,8 +179,7 @@ exports.resetPassword = async (req, res) => {
     const { email, password } = req.body;
 
     const user = await User.findOne({ where: { email } });
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     user.password = await bcrypt.hash(password, 10);
     await user.save();
@@ -202,13 +188,41 @@ exports.resetPassword = async (req, res) => {
       success: true,
       message: "Password reset successful",
     });
-
   } catch (err) {
     console.error("RESET ERROR:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
 
+// ======================================================================
+// GET ALL USERS
+// ======================================================================
+exports.getAllUsers = async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: { exclude: ["password"] }, // 👈 never send passwords
+    });
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No users found",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Users fetched successfully",
+      data: users,
+    });
+  } catch (err) {
+    console.error("GET ALL USERS ERROR:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
+  }
+};
 
 // ======================================================================
 // UPDATE PROFILE
@@ -218,8 +232,7 @@ exports.updateProfile = async (req, res) => {
     const { name, phone } = req.body;
 
     const user = await User.findByPk(req.user.id);
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     user.name = name || user.name;
     user.phone = phone || user.phone;
@@ -231,13 +244,11 @@ exports.updateProfile = async (req, res) => {
       message: "Profile updated",
       user,
     });
-
   } catch (err) {
     console.error("UPDATE PROFILE ERROR:", err);
     return res.status(500).json({ message: "Internal server error" });
   }
 };
-
 
 // ======================================================================
 // DELETE ACCOUNT
@@ -245,8 +256,7 @@ exports.updateProfile = async (req, res) => {
 exports.deleteAccount = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.id);
-    if (!user)
-      return res.status(404).json({ message: "User not found" });
+    if (!user) return res.status(404).json({ message: "User not found" });
 
     await user.destroy();
 
@@ -254,7 +264,6 @@ exports.deleteAccount = async (req, res) => {
       success: true,
       message: "Account deleted successfully",
     });
-
   } catch (err) {
     console.error("DELETE ACCOUNT ERROR:", err);
     return res.status(500).json({ message: "Internal server error" });

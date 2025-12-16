@@ -34,7 +34,11 @@ router.post(
 );
 
 // FORGOT PASSWORD → REQUEST OTP
-router.post("/forgot-password", [body("email").isEmail()], authController.forgotPassword);
+router.post(
+  "/forgot-password",
+  [body("email").isEmail()],
+  authController.forgotPassword
+);
 
 // RESET PASSWORD
 router.post(
@@ -49,4 +53,6 @@ router.patch("/update-profile", authMiddleware, authController.updateProfile);
 // DELETE ACCOUNT
 router.delete("/delete-account", authMiddleware, authController.deleteAccount);
 
+// GET ALL USERS
+router.get("/getAllUsers", authController.getAllUsers);
 module.exports = router;
